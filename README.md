@@ -1,9 +1,7 @@
 # FlowBank
 
 <p align="center">
-
-**Sistema de gerenciamento de solicitações de aumento de limite de crédito**
-
+  <strong>API backend para gerenciamento de solicitações de aumento de limite de crédito, com fluxo de aprovação orquestrado por BPMN.</strong>
 </p>
 
 <p align="center">
@@ -13,57 +11,72 @@
   <img src="https://img.shields.io/badge/JWT-Authentication-black?logo=jsonwebtokens" />
   <img src="https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql" />
   <img src="https://img.shields.io/badge/Flowable-BPMN-005F9E" />
-  <img src="https://img.shields.io/badge/Docker-Containerization-2496ED?logo=docker" />
+  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker" />
   <img src="https://img.shields.io/badge/AWS-EC2-FF9900?logo=amazonaws" />
 </p>
 
+## Índice
+
+- [Sobre o projeto](#sobre-o-projeto)
+- [Destaques técnicos](#destaques-técnicos)
+- [Funcionalidades](#funcionalidades)
+- [Arquitetura](#arquitetura)
+- [Fluxo de aprovação com BPMN](#fluxo-de-aprovação-com-bpmn)
+- [Modelo de dados](#modelo-de-dados)
+- [Exemplos de uso da API](#exemplos-de-uso-da-api)
+- [Decisões arquiteturais e trade-offs](#decisões-arquiteturais-e-trade-offs)
+- [Tecnologias](#tecnologias)
+- [Executando o projeto](#executando-o-projeto)
+- [Infraestrutura e deploy](#infraestrutura-e-deploy)
+- [Roadmap](#roadmap)
+- [Autor](#autor)
+
 ## Sobre o projeto
 
-O **FlowBank** é uma aplicação backend desenvolvida com Java e Spring Boot para gerenciar solicitações de aumento de limite de crédito.
+O **FlowBank** simula um fluxo de trabalho financeiro em que **clientes solicitam aumento de limite de crédito** e **funcionários analisam e decidem** sobre cada solicitação.
 
-O projeto simula um fluxo de trabalho financeiro no qual clientes solicitam aumento de limite e funcionários realizam a análise e a decisão sobre essas solicitações.
+Em vez de espalhar regras de aprovação pelo código, o processo é modelado em **BPMN (Flowable)**: as etapas e decisões ficam explícitas e visuais, enquanto os serviços Java executam as regras de negócio.
 
-A aplicação utiliza uma arquitetura de **Monólito Modular**, autenticação baseada em JWT, persistência com PostgreSQL e orquestração de processos com Flowable BPMN.
+O projeto foi construído como estudo e portfólio em engenharia backend, cobrindo desde a modelagem do domínio até o deploy em cloud.
 
-O sistema também foi containerizado com Docker e implantado em uma instância Amazon EC2.
+### O problema
 
-## Problema que o projeto busca resolver
+Em um processo convencional de crédito, várias etapas precisam ser executadas e rastreadas:
 
-Em um processo convencional de solicitação de crédito, diferentes etapas precisam ser executadas e acompanhadas:
+1. Recebimento da solicitação do cliente.
+2. Consulta e análise das informações (score e risco).
+3. Encaminhamento para um funcionário responsável.
+4. Aprovação ou rejeição.
+5. Registro da decisão e da justificativa.
 
-- Recebimento da solicitação do cliente.
-- Consulta e análise das informações.
-- Encaminhamento para um funcionário responsável.
-- Aprovação ou rejeição da solicitação.
-- Registro da decisão e de sua justificativa.
+O FlowBank organiza esse processo com regras de negócio bem definidas e rastreabilidade de cada decisão.
 
-O FlowBank busca organizar esse processo por meio de regras de negócio bem definidas e da orquestração das etapas de aprovação.
+## Destaques técnicos
+
+- **Monólito Modular**: módulos separados por domínio, sem a complexidade de microsserviços.
+- **Orquestração com Flowable BPMN**: User Task, Service Task e Exclusive Gateway.
+- **Segurança com Spring Security + JWT**: autenticação stateless para funcionários.
+- **Auditoria da decisão**: cada aprovação guarda funcionário, score, solicitação, data e justificativa.
+- **Deploy real**: containerizado com Docker Compose e publicado em uma instância AWS EC2.
 
 ## Funcionalidades
 
-- Autenticação de funcionários utilizando Spring Security e JWT.
+- Autenticação de funcionários (Spring Security e JWT).
 - Gerenciamento de clientes.
 - Criação de solicitações de aumento de limite.
-- Análise de solicitações de crédito.
-- Encaminhamento de solicitações para aprovação.
-- Aprovação ou rejeição por funcionários.
-- Registro de justificativas das decisões.
+- Análise de crédito com score e classificação de risco.
+- Encaminhamento da solicitação para aprovação.
+- Aprovação ou rejeição por funcionários, com justificativa registrada.
 - Orquestração do processo de aprovação com Flowable BPMN.
-- Persistência dos dados no PostgreSQL.
+- Persistência no PostgreSQL.
 
 ## Arquitetura
 
-O projeto utiliza o padrão **Monólito Modular**, organizando a aplicação em módulos separados por responsabilidade de negócio.
-<img width="781" height="461" alt="image" src="https://github.com/user-attachments/assets/ebe56b5a-dc92-4beb-a5da-d170a8f0d571" />
+O projeto adota o padrão **Monólito Modular**: a aplicação é dividida em módulos por responsabilidade de negócio, e cada módulo mantém suas próprias entidades, DTOs, repositories, services e controllers.
 
-
-Cada módulo pode possuir suas próprias entidades, DTOs, repositories, services e controllers, mantendo as responsabilidades relacionadas ao seu domínio.
+<img width="781" height="461" alt="Arquitetura do FlowBank" src="https://github.com/user-attachments/assets/ebe56b5a-dc92-4beb-a5da-d170a8f0d571" />
 
 ## Fluxo de aprovação com BPMN
-
-O FlowBank utiliza o **Flowable** para orquestrar o processo de aprovação das solicitações.
-
-O BPMN representa visualmente as etapas e decisões do processo, enquanto os serviços Java executam as regras de negócio.
 
 ```mermaid
 flowchart TD
@@ -79,25 +92,56 @@ flowchart TD
     I --> J
 ```
 
-Elementos utilizados:
+| Elemento BPMN | Papel no processo |
+|---|---|
+| **Start Event** | Inicia o processo |
+| **User Task** | Atividade executada pelo funcionário (análise) |
+| **Service Task** | Executa a regra de negócio via componente Java |
+| **Exclusive Gateway** | Direciona o fluxo conforme o resultado da aprovação |
+| **End Event** | Encerra o processo |
 
-- **Start Event:** inicia o processo.
-- **User Task:** representa a atividade executada pelo funcionário.
-- **Service Task:** executa a lógica de negócio por meio de um componente Java.
-- **Exclusive Gateway:** direciona o fluxo conforme o resultado da aprovação.
-- **End Event:** representa o encerramento do processo.
+## Modelo de dados
 
-## Exemplos de utilização da API
+```mermaid
+erDiagram
+    CLIENTE ||--o{ SOLICITACAO : "faz"
+    SOLICITACAO ||--o| SCORE : "é analisada com"
+    SOLICITACAO ||--o| APROVACAO : "recebe"
+    FUNCIONARIO ||--o{ APROVACAO : "decide"
+    SCORE ||--o| APROVACAO : "embasa"
 
-### 1. Consultar os dados de uma aprovação
-
-**Endpoint:**
-
-```http
-http://3.143.230.150:8081/api/aprovar
+    SOLICITACAO {
+        long id
+        decimal limiteSolicitado
+        string motivo
+    }
+    SCORE {
+        long id
+        int scoreFinal
+        string risco
+    }
+    FUNCIONARIO {
+        long id
+        string nome
+        string tipo
+        string email
+    }
+    APROVACAO {
+        long id
+        string status
+        datetime dataAprovacao
+        string justificativa
+    }
 ```
 
-**Exemplo de resposta JSON:**
+## Exemplos de uso da API
+
+> Os exemplos usam `localhost`. Os endpoints protegidos exigem o header `Authorization: Bearer <token>`.
+
+### 1. Dados de uma aprovação
+
+
+```
 
 ```json
 {
@@ -109,7 +153,7 @@ http://3.143.230.150:8081/api/aprovar
     "id": 1,
     "nome": "Administrador",
     "tipo": "GERENTE",
-    "email": "gerenteFlowBank@gmail.com"
+    "email": "gerente@exemplo.com"
   },
   "solicitacao": {
     "id": 1,
@@ -126,35 +170,20 @@ http://3.143.230.150:8081/api/aprovar
 
 ### 2. Registrar a decisão de uma solicitação
 
-Endpoint responsável por registrar a decisão sobre uma solicitação.
-
-**Método:** `POST`
-
-**Endpoint:**
-
 ```http
-http://3.143.230.150:8081/api/solicitacoes/4/decisao
+POST http://localhost:8081/api/solicitacoes/4/decisao
+Authorization: Bearer <token>
 ```
 
-**Resposta HTTP:**
+**Resposta:** `204 No Content`, indicando que a decisão foi registrada com sucesso, sem corpo na resposta.
 
-```http
-204 No Content
-```
+### 3. Persistência no PostgreSQL
 
-O status `204 No Content` indica que a operação foi concluída com sucesso, sem conteúdo no corpo da resposta.
-
-### 3. Persistência da aprovação no PostgreSQL
-
-Após a execução da decisão, os dados ficam registrados na tabela `aprovacao`.
-
-**Consulta SQL utilizada:**
+Após a decisão, o registro fica na tabela `aprovacao`:
 
 ```sql
 SELECT * FROM aprovacao;
 ```
-
-**Representação JSON do registro persistido:**
 
 ```json
 {
@@ -168,166 +197,128 @@ SELECT * FROM aprovacao;
 }
 ```
 
-O registro demonstra o relacionamento entre a aprovação, o funcionário responsável, o score utilizado na análise e a solicitação correspondente.
+O registro mostra o relacionamento entre aprovação, funcionário responsável, score utilizado e solicitação correspondente.
 
 ## Decisões arquiteturais e trade-offs
 
-As escolhas tecnológicas foram realizadas considerando o escopo atual do projeto, a complexidade operacional e a possibilidade de evolução futura.
+As escolhas consideram o escopo atual, a complexidade operacional e a possibilidade de evolução.
 
-### 1. Monólito Modular em vez de monólito tradicional ou microsserviços
+| Decisão | Alternativa descartada | Motivação principal |
+|---|---|---|
+| Monólito Modular | Monólito tradicional / microsserviços | Organização por domínio sem complexidade distribuída |
+| PostgreSQL em container | Amazon RDS | Menor custo e controle da configuração |
+| EC2 + Docker Compose | ECS / EKS | Simplicidade operacional e controle da infraestrutura |
+| Flowable BPMN | Regras de fluxo no código | Processo de aprovação explícito e visual |
 
-**Por que Monólito Modular?**
+<details>
+<summary><strong>1. Monólito Modular vs. monólito tradicional vs. microsserviços</strong></summary>
 
-Um monólito tradicional pode concentrar diferentes responsabilidades sem limites claros entre os domínios, aumentando o acoplamento conforme a aplicação cresce.
-
-Os microsserviços permitem independência de implantação e escalabilidade por serviço, mas introduzem complexidades adicionais, como comunicação entre serviços, consistência distribuída, observabilidade e infraestrutura.
-
-O Monólito Modular oferece um equilíbrio: mantém a simplicidade operacional de uma aplicação única, mas organiza o código em módulos com responsabilidades bem definidas.
-
-**Trade-offs:**
+Um monólito tradicional tende a misturar responsabilidades e aumentar o acoplamento conforme cresce. Microsserviços trazem implantação e escala independentes, mas exigem comunicação entre serviços, consistência distribuída, observabilidade e mais infraestrutura. O Monólito Modular mantém a simplicidade de uma aplicação única, com módulos de responsabilidades claras.
 
 | Vantagens | Desvantagens |
 |---|---|
 | Menor complexidade de infraestrutura | Implantação conjunta dos módulos |
-| Comunicação interna mais simples | Escalabilidade da aplicação como um todo |
+| Comunicação interna mais simples | Escala da aplicação como um todo |
 | Menor custo operacional inicial | Necessidade de controlar dependências entre módulos |
-| Separação por domínio | Não oferece isolamento de processos entre módulos |
+| Separação por domínio | Sem isolamento de processos entre módulos |
 
-**Decisão:** para o escopo atual do FlowBank, a arquitetura modular oferece organização e possibilidade de evolução sem assumir antecipadamente a complexidade de uma arquitetura distribuída.
+</details>
 
-### 2. PostgreSQL em container em vez de Amazon RDS
+<details>
+<summary><strong>2. PostgreSQL em container vs. Amazon RDS</strong></summary>
 
-PostgreSQL é o sistema gerenciador de banco de dados, enquanto Amazon RDS é um serviço gerenciado que pode executar PostgreSQL.
-
-O projeto utiliza PostgreSQL em um container Docker, executado na infraestrutura da EC2.
-
-**Por que essa escolha?**
-
-- Redução do custo inicial de infraestrutura.
-- Facilidade de reproduzir o ambiente com Docker Compose.
-- Controle direto sobre a configuração do banco.
-- Ambiente de desenvolvimento e implantação mais próximo.
-
-**Trade-offs:**
+O projeto roda o PostgreSQL em um container Docker na própria EC2, o que reduz o custo inicial, facilita reproduzir o ambiente com Docker Compose e dá controle direto da configuração.
 
 | PostgreSQL em container na EC2 | Amazon RDS |
 |---|---|
 | Maior controle da infraestrutura | Serviço gerenciado |
 | Menor custo inicial potencial | Custo adicional pelo serviço |
-| Administração manual | Backups e manutenção gerenciados conforme configuração |
-| Responsabilidade própria pela disponibilidade | Recursos de alta disponibilidade e recuperação |
+| Administração manual | Backups e manutenção gerenciados |
+| Disponibilidade sob responsabilidade própria | Alta disponibilidade e recuperação |
 
-**Decisão:** o PostgreSQL em container foi escolhido para manter a infraestrutura inicial simples e econômica.
+Em produção, com requisitos maiores de disponibilidade e recuperação, o RDS seria a evolução natural.
 
-Em um cenário de produção com requisitos maiores de disponibilidade, recuperação e manutenção, o Amazon RDS seria uma alternativa interessante.
+</details>
 
-### 3. Amazon EC2 em vez de ECS ou EKS
+<details>
+<summary><strong>3. EC2 vs. ECS vs. EKS</strong></summary>
 
-O projeto utiliza Amazon EC2 como infraestrutura de hospedagem, executando os containers por meio de Docker Compose.
-
-**Por que EC2?**
-
-A EC2 oferece uma máquina virtual com controle direto sobre o ambiente, permitindo instalar e administrar Docker, configurar a aplicação e executar o banco de dados.
-
-**Trade-offs:**
+A EC2 entrega uma VM com controle direto do ambiente, suficiente para uma aplicação pequena e para demonstrar o deploy de uma aplicação Java containerizada na nuvem.
 
 | EC2 + Docker Compose | ECS | EKS |
 |---|---|---|
 | Controle direto da máquina | Orquestração gerenciada de containers | Orquestração baseada em Kubernetes |
 | Configuração mais manual | Gerenciamento de serviços e tarefas | Maior flexibilidade e complexidade |
-| Simples para uma aplicação pequena | Adequado para aplicações containerizadas em escala | Adequado para ambientes Kubernetes |
-| Maior responsabilidade operacional | Parte da operação é gerenciada pela AWS | Control plane Kubernetes gerenciado pela AWS |
+| Simples para aplicação pequena | Adequado para containers em escala | Adequado para ambientes Kubernetes |
 
-**Decisão:** EC2 foi escolhida pela simplicidade operacional e pelo controle da infraestrutura, além de permitir demonstrar a implantação de uma aplicação Java containerizada em ambiente cloud.
+ECS facilitaria orquestração e escala numa evolução futura; EKS só se justificaria com requisitos que pedissem o ecossistema Kubernetes.
 
-Em uma evolução futura, ECS poderia facilitar a orquestração e a escalabilidade dos containers. EKS faria sentido caso existissem requisitos que justificassem a adoção do ecossistema Kubernetes.
+</details>
 
-### Resumo das decisões
-
-| Decisão | Motivação principal |
-|---|---|
-| Monólito Modular | Organização por domínio sem complexidade distribuída |
-| PostgreSQL em Docker | Controle e menor custo inicial |
-| EC2 | Simplicidade e controle da infraestrutura |
-| Docker Compose | Execução conjunta da API e do banco |
-| Flowable BPMN | Orquestração explícita do processo de aprovação |
-
-## Tecnologias utilizadas
+## Tecnologias
 
 | Tecnologia | Responsabilidade |
 |---|---|
 | Java 21 | Linguagem principal |
-| Spring Boot | Construção da API REST |
-| Spring Security | Autenticação e autorização |
-| JWT | Autenticação baseada em tokens |
-| Spring Data JPA | Persistência e acesso aos dados |
-| Hibernate | Mapeamento objeto-relacional |
+| Spring Boot | API REST |
+| Spring Security + JWT | Autenticação e autorização |
+| Spring Data JPA / Hibernate | Persistência e mapeamento objeto-relacional |
 | PostgreSQL | Banco de dados relacional |
 | Flowable BPMN | Orquestração de processos |
-| Docker | Containerização |
-| Docker Compose | Gerenciamento dos containers |
-| AWS EC2 | Hospedagem da aplicação |
+| Docker / Docker Compose | Containerização e execução conjunta |
+| AWS EC2 | Hospedagem |
 
 ## Executando o projeto
 
 ### Pré-requisitos
 
 - Git
-- Docker
-- Docker Compose
+- Docker e Docker Compose
 
-### 1. Clone o repositório
+### Passo a passo
 
 ```bash
+# 1. Clone o repositório
 git clone https://github.com/HerikKou/Flow-Bank.git
-```
-
-### 2. Entre na pasta
-
-```bash
 cd Flow-Bank
-```
 
-### 3. Configure as variáveis de ambiente
+# 2. Configure as variáveis de ambiente (veja abaixo)
+cp .env.example .env
 
-Configure as credenciais do banco de dados, os dados do gerente inicial e o segredo utilizado pelo JWT.
-
-Não versione senhas, tokens ou outras credenciais no repositório.
-
-### 4. Execute a aplicação
-
-```bash
+# 3. Suba a aplicação
 docker compose up --build -d
-```
 
-### 5. Verifique os containers
-
-```bash
+# 4. Verifique os containers e os logs
 docker compose ps
-```
-
-### 6. Consulte os logs
-
-```bash
 docker compose logs -f app
 ```
 
-A API utiliza a porta `8081` por padrão.
+A API fica disponível em `http://localhost:8081`.
+
+### Variáveis de ambiente
+
+Configure no `.env` (exemplos de nomes, ajuste conforme o seu `docker-compose.yml`):
+
+| Variável | Descrição |
+|---|---|
+| `DB_USER` / `DB_PASSWORD` | Credenciais do PostgreSQL |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Dados do gerente inicial |
+| `JWT_SECRET` | Segredo usado para assinar os tokens JWT |
+
+> **Importante:** nunca versione senhas, tokens ou outras credenciais. Mantenha o `.env` no `.gitignore`.
 
 ## Infraestrutura e deploy
 
-O FlowBank foi implantado em uma instância **Amazon EC2**, utilizando Docker para executar a aplicação Java e o banco de dados PostgreSQL.
+O FlowBank foi implantado em uma instância **Amazon EC2**, com Docker Compose executando a aplicação Java e o PostgreSQL. O Compose centraliza a configuração do ambiente e permite reproduzi-lo com um único comando.
 
-A utilização do Docker Compose permite iniciar os serviços e manter a configuração do ambiente centralizada.
+## Roadmap
 
-## Próximas evoluções
-
-- Implementação de testes automatizados com JUnit e Mockito.
-- Evolução da estratégia de observabilidade.
-- Centralização e aprimoramento dos logs.
-- Avaliação de Amazon RDS para gerenciamento do banco.
-- Avaliação de ECS para orquestração dos containers.
-- Implementação de pipeline CI/CD.
+- [ ] Testes automatizados com JUnit e Mockito
+- [ ] Pipeline de CI/CD
+- [ ] Observabilidade: métricas e logs centralizados
+- [ ] Documentação da API com OpenAPI/Swagger
+- [ ] Avaliar Amazon RDS para o banco
+- [ ] Avaliar ECS para orquestração dos containers
 
 ## Autor
 
