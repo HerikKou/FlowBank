@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions
+    xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:flowable="http://flowable.org/bpmn"
+    targetNamespace="http://www.flowable.org/processdef">
+
+    <process
+        id="aprovacaoLimite"
+        name="Aprovação de Limite"
+        isExecutable="true">
+
+        <!-- Início do processo -->
+        <startEvent id="inicio"/>
+
+        <sequenceFlow
+            id="fluxoInicio"
+            sourceRef="inicio"
+            targetRef="analisarSolicitacao"/>
+
+        <!-- Funcionário analisa a solicitação -->
+        <userTask
+            id="analisarSolicitacao"
+            name="Analisar Solicitação"/>
+
+        <sequenceFlow
+            id="fluxoAnalise"
+            sourceRef="analisarSolicitacao"
+            targetRef="registrarAprovacao"/>
+
+        <!-- Registra a decisão utilizando o AprovacaoDelegate -->
+        <serviceTask
+            id="registrarAprovacao"
+            name="Registrar Aprovação"
+            flowable:delegateExpression="${aprovacaoDelegate}"/>
+
+        <sequenceFlow
+            id="fluxoRegistro"
+            sourceRef="registrarAprovacao"
+            targetRef="decisaoAprovacao"/>
+
+        <!-- Verifica o resultado da aprovação -->
+        <exclusiveGateway id="decisaoAprovacao"/>
+
+        <sequenceFlow
+            id="fluxoAprovado"
+            sourceRef="decisaoAprovacao"
+            targetRef="fimAprovado">
+
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${status == 'APROVADO'}]]>
+            </conditionExpression>
+        </sequenceFlow>
+
+        <sequenceFlow
+            id="fluxoRejeitado"
+            sourceRef="decisaoAprovacao"
+            targetRef="fimRejeitado">
+
+            <conditionExpression xsi:type="tFormalExpression">
+                <![CDATA[${status == 'NEGADO'}]]>
+            </conditionExpression>
+        </sequenceFlow>
+
+        <!-- Fim: solicitação aprovada -->
+        <endEvent id="fimAprovado"/>
+
+        <!-- Fim: solicitação rejeitada -->
+        <endEvent id="fimRejeitado"/>
+
+    </process>
+
+
+</definitions>

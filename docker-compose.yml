@@ -1,0 +1,44 @@
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: flowbank-db
+    restart: always
+
+    environment:
+      POSTGRES_DB: flowbank
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Kou123
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - flowbank_data:/var/lib/postgresql
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d flowbank"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    image: flowbank
+    restart: always
+
+    ports:
+      - "8081:8081"
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/flowbank
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: Kou123
+      SERVER_PORT: 8081
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  flowbank_data:
