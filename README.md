@@ -100,39 +100,6 @@ flowchart TD
 | **Exclusive Gateway** | Direciona o fluxo conforme o resultado da aprovação |
 | **End Event** | Encerra o processo |
 
-## Modelo de dados
-
-```mermaid
-erDiagram
-    CLIENTE ||--o{ SOLICITACAO : "faz"
-    SOLICITACAO ||--o| SCORE : "é analisada com"
-    SOLICITACAO ||--o| APROVACAO : "recebe"
-    FUNCIONARIO ||--o{ APROVACAO : "decide"
-    SCORE ||--o| APROVACAO : "embasa"
-
-    SOLICITACAO {
-        long id
-        decimal limiteSolicitado
-        string motivo
-    }
-    SCORE {
-        long id
-        int scoreFinal
-        string risco
-    }
-    FUNCIONARIO {
-        long id
-        string nome
-        string tipo
-        string email
-    }
-    APROVACAO {
-        long id
-        string status
-        datetime dataAprovacao
-        string justificativa
-    }
-```
 
 ## Exemplos de uso da API
 
